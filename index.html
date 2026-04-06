@@ -1,0 +1,738 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROYECTO</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
+        .header-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; font-weight: bold; position: sticky; top: 0; background: white; z-index: 100; padding-top: 10px;}
+        #timer { color: var(--error); font-size: 1.2rem; }
+
+        #login-section { text-align: center; padding: 20px 0; }
+        
+        /* Bloque de Materias */
+        .subject-block { background: #fdfdfd; border: 2px solid #e1e8ed; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .subject-title { color: var(--primary); font-size: 1.5rem; margin-top: 0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 3px solid var(--secondary); text-align: left; display: flex; align-items: center; gap: 10px;}
+        
+        /* Grid de Temas */
+        .topics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .topic-card { background: var(--secondary); color: white; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.3s; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .topic-card:hover { background: #2980b9; transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .topic-all { background: var(--primary); }
+        .topic-all:hover { background: #1a252f; }
+
+        .btn-main { padding: 12px 25px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.3s; width: 100%; margin-top: 30px;}
+        .btn-main:hover { background: #1a252f; }
+        .btn-danger { background: var(--error); width: auto; margin-top: 10px; font-size: 0.9rem; padding: 8px 15px;}
+        .btn-danger:hover { background: #c0392b; }
+
+        /* Estilos de las preguntas */
+        .question-block { background: #fff; border: 1px solid #e1e8ed; border-radius: 10px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .question-header { color: var(--primary); border-bottom: 2px solid var(--secondary); padding-bottom: 8px; margin-bottom: 15px; font-size: 1.1rem; }
+        .question-text { font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; }
+        
+        .options-container { display: grid; gap: 12px; margin-top: 20px; }
+        .option-btn { 
+            padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; 
+            transition: all 0.2s; background: white; text-align: left; font-size: 1.05rem;
+        }
+        .option-btn:hover:not(:disabled) { background: #f8f9fa; border-color: var(--secondary); }
+        
+        .correct { background-color: var(--success) !important; color: white; border-color: var(--success); }
+        .wrong { background-color: var(--error) !important; color: white; border-color: var(--error); }
+        
+        .explanation { margin-top: 20px; padding: 15px; background: #e8f4fd; border-left: 5px solid var(--secondary); display: none; border-radius: 4px; line-height: 1.5; }
+
+        /* --- Estilos para el Gráfico Donut --- */
+        .gauge-container { display: flex; justify-content: center; margin: 30px 0; }
+        .gauge-outer { 
+            width: 180px; height: 180px; border-radius: 50%; 
+            background: conic-gradient(var(--success) 0%, var(--error) 0); 
+            display: flex; align-items: center; justify-content: center; position: relative; 
+        }
+        .gauge-outer::after { 
+            content: ''; width: 130px; height: 130px; border-radius: 50%; 
+            background: white; position: absolute; 
+        }
+        .gauge-inner { z-index: 1; text-align: center; }
+        #score-text { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-section">
+        <h1 style="color: var(--primary);">PROYECTO</h1>
+        <p>Selecciona el bloque que deseas practicar para comenzar directamente.</p>
+        
+        <div id="subjects-container" style="margin-top: 30px; margin-bottom: 40px;"></div>
+
+        <hr style="border: none; border-top: 2px solid #e1e8ed; margin-bottom: 20px;">
+        <button class="btn-main" style="background: #e67e22; margin-top: 10px;" onclick="startFailedQuestionsTest()">
+            ❌ Repasar mis fallos (<span id="failed-count">0</span>)
+        </button>
+        <button class="btn-main btn-danger" onclick="resetProgress()">🗑️ Borrar mi progreso</button>
+    </div>
+
+    <div id="test-section" style="display:none;">
+        <div class="header-info">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button onclick="goBackToMenu()" style="padding: 6px 12px; border: none; border-radius: 6px; background: var(--secondary); color: white; font-weight: bold; cursor: pointer;">🔙 Volver</button>
+                <div> 📚  <span id="display-topic"></span></div>
+            </div>
+            <div id="timer"> ⏱️  00:00</div>
+        </div>
+
+        <div id="questions-list"></div>
+        
+        <button id="finish-btn" class="btn-main" onclick="finishTest()">Finalizar Test ➔</button>
+    </div>
+
+    <div id="results-section" style="text-align: center; display: none; padding: 40px 0;">
+        <h2 style="color: var(--primary);">¡Test Finalizado! 🎉</h2>
+        
+        <div class="gauge-container">
+            <div class="gauge-outer" id="gauge-chart">
+                <div class="gauge-inner">
+                    <span id="score-text">0/0</span>
+                </div>
+            </div>
+        </div>
+
+        <p id="results-detail-text" style="font-size: 1.2rem; margin-bottom: 30px;"></p>
+        <button class="btn-main" onclick="goBackToMenu()">  ↻  Volver al Menú Principal</button>
+    </div>
+</div>
+
+<script>
+
+// ==========================================
+// BASE DE DATOS DE PREGUNTAS (180 PREGUNTAS TFG)
+// ==========================================
+const misPreguntas = [
+    // --- APARTADO 1 ---
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Motivación Principal", u: "Cuestionario", p: "¿Cuál es la motivación fundamental en el diseño de la infraestructura de red para ESMESEC CONSULTING S.L.?", r: ["Aplicar la seguridad desde el diseño", "Reducir los costes de licenciamiento a cero", "Ofrecer auditorías a terceros más económicas", "Crear una red plana de alto rendimiento"], c: "Aplicar la seguridad desde el diseño", e: "La motivación fundamental del proyecto responde a la necesidad de aplicar la 'seguridad desde el diseño', respaldando así la reputación de la consultora." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Motivación Principal", u: "Cuestionario", p: "¿Qué riesgo principal presenta una infraestructura de red 'plana' en una PYME?", r: ["Es muy compleja de configurar", "Requiere servidores de alto rendimiento", "Servidores públicos y equipos internos conviven en la misma subred", "No permite el uso de dispositivos IoT"], c: "Servidores públicos y equipos internos conviven en la misma subred", e: "En una red plana, si un servidor web se ve comprometido, el atacante tendría acceso directo a la red interna." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Motivación Principal", u: "Cuestionario", p: "¿Qué solución de software se propone para hacer viable la seguridad avanzada en la empresa sin depender de hardware propietario?", r: ["Sistemas UTM de gama alta", "Software de código abierto y un diseño lógico eficiente", "Dispositivos IoT", "Sistemas operativos de pago cerrado"], c: "Software de código abierto y un diseño lógico eficiente", e: "Se apuesta por el software de código abierto y configuración detallada para evitar los costes prohibitivos de soluciones comerciales." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Motivación Principal", u: "Cuestionario", p: "¿Qué significa el término UTM en el contexto de seguridad perimetral mencionado en el proyecto?", r: ["Unified Traffic Monitor", "Unidad de Transferencia Multipunto", "Unified Threat Management (Gestión Unificada de Amenazas)", "Universal Tunneling Mechanism"], c: "Unified Threat Management (Gestión Unificada de Amenazas)", e: "UTM se refiere a dispositivos que integran múltiples funciones de seguridad en una única consola." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Comparativa Razonada", u: "Cuestionario", p: "¿Por qué se descartó desplegar una red plana a pesar de ser más rápida y sencilla de configurar?", r: ["Por incompatibilidad con VirtualBox", "Por motivos de seguridad, para aislar el servidor web público de la red interna", "Porque consume más ancho de banda", "Porque Nginx no funciona en redes planas"], c: "Por motivos de seguridad, para aislar el servidor web público de la red interna", e: "La segmentación mediante DMZ garantiza que si se compromete el servidor web, el atacante no pueda realizar movimientos laterales." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Comparativa Razonada", u: "Cuestionario", p: "¿Cuál es la principal ventaja técnica de Nginx frente a Apache que justificó su elección en este proyecto?", r: ["Su arquitectura orientada a eventos que consume menos memoria", "Su facilidad de instalación en Windows", "Que viene por defecto con el sistema operativo", "Su integración nativa con bases de datos"], c: "Su arquitectura orientada a eventos que consume menos memoria", e: "Nginx consume menos memoria y responde mejor bajo picos de tráfico, optimizando recursos virtuales." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Comparativa Razonada", u: "Cuestionario", p: "¿Por qué se eligió WireGuard frente a OpenVPN para el acceso remoto?", r: ["Porque es el estándar más antiguo y probado", "Porque permite crear redes planas", "Porque es más moderno, ligero y ofrece túneles VPN más rápidos", "Porque no requiere intercambio de claves"], c: "Porque es más moderno, ligero y ofrece túneles VPN más rápidos", e: "WireGuard es mucho más moderno y ligero que OpenVPN, lo que se traduce en mayor velocidad." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Comparativa Razonada", u: "Cuestionario", p: "¿En qué se basa el mecanismo de configuración y seguridad principal de WireGuard?", r: ["En el uso de tokens SMS", "En el intercambio de claves públicas", "En conexiones por Telnet", "En contraseñas de un solo uso"], c: "En el intercambio de claves públicas", e: "WireGuard se basa en un intercambio de claves públicas, lo que hace su configuración directa y robusta." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "¿Qué mecanismo se utiliza en el proyecto para evitar la exposición directa de los servicios públicos a Internet?", r: ["Redirección de DNS locales", "El uso de firewalls perimetrales y una DMZ", "Antivirus instalados en cada equipo de la LAN", "Creación de una red plana"], c: "El uso de firewalls perimetrales y una DMZ", e: "Se utiliza una DMZ y firewalls como barrera de control." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "¿Cómo soluciona el proyecto la necesidad de movilidad segura y teletrabajo sin exponer puertos de gestión?", r: ["Abriendo el puerto de SSH hacia Internet", "Desplegando un sistema de túneles cifrados con WireGuard", "Publicando el servidor en la DMZ", "Mediante el uso de un proxy inverso"], c: "Desplegando un sistema de túneles cifrados con WireGuard", e: "Para facilitar el trabajo remoto se despliega un sistema VPN con WireGuard." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "¿Qué función cumple el Proxy Inverso en la infraestructura diseñada?", r: ["Publicar el portal corporativo ocultando la estructura interna", "Encriptar las contraseñas internas", "Segmentar la red LAN", "Bloquear el movimiento lateral"], c: "Publicar el portal corporativo ocultando la estructura interna", e: "El proxy inverso publica el portal y oculta la verdadera estructura del servidor backend." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "¿Qué herramienta se establece en los objetivos para realizar el diseño lógico inicial antes del montaje real?", r: ["VirtualBox", "Nginx", "Cisco Packet Tracer", "WireGuard"], c: "Cisco Packet Tracer", e: "El esquema lógico se define y valida con Cisco Packet Tracer." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "¿En qué plataforma se levantará íntegramente el entorno tras el diseño teórico?", r: ["Amazon Web Services", "Cisco Packet Tracer", "VirtualBox", "Servidores físicos"], c: "VirtualBox", e: "El entorno se desplegará en máquinas virtuales dentro de VirtualBox." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Introducción y Objetivos", u: "Cuestionario", p: "En la fase de bastionado, ¿qué herramienta se utilizará para aplicar las reglas de filtrado y protección perimetral?", r: ["Scripts de iptables", "Archivos de Nginx", "Políticas de Windows", "Claves públicas de WireGuard"], c: "Scripts de iptables", e: "Se configurarán reglas mediante scripts de iptables para blindar la red." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "En la tabla RFTP, ¿cuál es la prueba definida para comprobar el correcto despliegue del entorno virtualizado (R01)?", r: ["Comprobación de direcciones IP asignadas a cada máquina", "Ping exitoso a 8.8.8.8", "Intento de conexión fallida por SSH", "Verificación del handshake de WireGuard"], c: "Comprobación de direcciones IP asignadas a cada máquina", e: "La prueba es la comprobación de las direcciones IP en las tarjetas de red virtuales." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "¿Qué tarea técnica se asocia a la función de VPN de alto rendimiento en la tabla RFTP?", r: ["Instalación de Nginx", "Instalación de WireGuard y generación de pares de claves", "Implementación de reglas SNAT", "Creación de un dominio corporativo"], c: "Instalación de WireGuard y generación de pares de claves", e: "La tarea clave para la VPN es instalar WireGuard y generar sus pares de claves." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "¿Cómo se prueba, según la tabla RFTP, que el túnel VPN se ha establecido correctamente?", r: ["Ping a 8.8.8.8", "Accediendo a la web pública", "Mediante la verificación del 'handshake' (apretón de manos)", "Revisando el firewall perimetral"], c: "Mediante la verificación del 'handshake' (apretón de manos)", e: "La prueba consiste en la verificación del handshake criptográfico." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "Según la tabla RFTP, ¿qué política por defecto se debe implementar en los scripts de iptables?", r: ["Políticas permisivas", "Políticas de redirección", "Políticas de enmascaramiento", "Políticas restrictivas (DROP) por defecto"], c: "Políticas restrictivas (DROP) por defecto", e: "Se debe aplicar un script con políticas restrictivas (DROP) bloqueando lo no autorizado." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "¿Qué prueba valida que el servidor Web (Nginx) en la DMZ cumple con los requisitos del servicio público?", r: ["Ping a 8.8.8.8", "Acceso a la web corporativa desde el navegador del host anfitrión o red externa", "Fallo de conexión SSH", "Generación de claves"], c: "Acceso a la web corporativa desde el navegador del host anfitrión o red externa", e: "Se prueba accediendo efectivamente a la web corporativa desde el exterior." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Tabla RFTP", u: "Cuestionario", p: "¿Qué tipo de reglas (NAT) se deben configurar para permitir que la LAN interna salga a Internet según la RFTP?", r: ["Reglas DNAT", "Reglas SNAT/Masquerade", "Reglas de DROP", "Reglas de VPN persistente"], c: "Reglas SNAT/Masquerade", e: "Se requieren reglas NAT (SNAT/Masquerade) para ocultar las IPs de la LAN y salir a Internet." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "¿Cuáles son los tres perfiles de usuario definidos en la especificación de requisitos y casos de uso?", r: ["Administrador, Empleado Presencial y Auditor", "Usuario Público (Cliente), Consultor (Empleado) y Administrador (Técnico)", "Técnico, Desarrollador y Usuario Público", "Cliente, Proveedor e Invitado"], c: "Usuario Público (Cliente), Consultor (Empleado) y Administrador (Técnico)", e: "Se definieron Usuario Público, Consultor (teletrabajo) y Administrador (técnico)." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "¿Cuál es el único acceso permitido para el perfil 'Usuario Público' (Cliente)?", r: ["Acceso al servidor web corporativo en la DMZ", "Acceso por SSH al Firewall Perimetral", "Acceso a la red LAN de forma restringida", "Acceso al túnel VPN de lectura"], c: "Acceso al servidor web corporativo en la DMZ", e: "El tráfico público solo tiene permitido el acceso al servidor web en la DMZ." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "¿Quién es el único perfil autorizado para establecer conexiones de gestión (SSH) para mantenimiento?", r: ["Consultor externo", "Usuario Público", "Cualquier empleado", "Administrador (Técnico)"], c: "Administrador (Técnico)", e: "El Administrador es el único perfil autorizado para conexiones SSH." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "En el Caso de Uso 1, ¿cómo redirige el Firewall Perimetral el tráfico del puerto 80 hacia el servidor Nginx?", r: ["Conexión VPN directa", "Mediante una regla de redirección de puertos (DNAT)", "Utilizando enmascaramiento SNAT", "Configurando una ruta dinámica"], c: "Mediante una regla de redirección de puertos (DNAT)", e: "Utiliza DNAT para redirigir el tráfico hacia la IP privada de Nginx en la DMZ." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "En el Caso de Uso 2 (Teletrabajo), ¿qué sucede en el Firewall si una conexión VPN entrante NO posee la clave correcta?", r: ["Se solicita una contraseña", "Se envía un REJECT", "El paquete se descarta silenciosamente (Drop), ocultando el servicio", "Se redirige a una honeypot"], c: "El paquete se descarta silenciosamente (Drop), ocultando el servicio", e: "WireGuard descarta paquetes sin la clave correcta silenciosamente (Drop)." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "En teletrabajo, ¿qué permite la itinerancia automática (mantener la sesión al cambiar de red)?", r: ["IP pública estática", "La validación de la identidad mediante la clave criptográfica y no por la IP", "Contraseñas guardadas en caché", "Protocolo OSPF"], c: "La validación de la identidad mediante la clave criptográfica y no por la IP", e: "WireGuard valida al cliente por su clave criptográfica, manteniendo la sesión." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "En el Caso de Uso 3 (Acceso LAN), ¿qué regla permite que retorne el tráfico de navegación?", r: ["Regla DNAT", "Inspección de Estado (ESTABLISHED/RELATED)", "Una regla ACCEPT incondicional", "El enrutamiento de la VPN"], c: "Inspección de Estado (ESTABLISHED/RELATED)", e: "La inspección de estado permite que el tráfico de respuesta pase al interior." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "En el Caso de Uso 4 (Mantenimiento), ¿qué medida de Hardening se aplica al servicio SSH?", r: ["Cambiar puerto aleatorio", "Permitir acceso web", "Rechazar el inicio de sesión interactivo por contraseña", "Instalar antivirus"], c: "Rechazar el inicio de sesión interactivo por contraseña", e: "SSH se configura para rechazar contraseñas, permitiendo acceso solo con clave." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "¿Qué acción realiza el FW1 respecto al tráfico del 'Empleado Presencial' que desea salir a Internet?", r: ["Cifra mediante WireGuard", "Actúa como puerta de enlace aplicando traducción de direcciones (NAT/Masquerade)", "Oculta el tráfico en la DMZ", "Aplica DNAT"], c: "Actúa como puerta de enlace aplicando traducción de direcciones (NAT/Masquerade)", e: "El Firewall 1 aplica NAT (Masquerade) traduciendo la IP privada a pública." },
+    { m: "Apartado 1: Fundamentos y Requisitos", t: "Casos de Uso", u: "Cuestionario", p: "Según los Casos de Uso, ¿por qué puerto gestiona el Firewall 1 las conexiones VPN?", r: ["TCP 22", "TCP 80", "UDP 51820", "UDP 53"], c: "UDP 51820", e: "Permite la conexión entrante en UDP 51820 para el túnel VPN." },
+
+    // --- APARTADO 2 ---
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "¿Cuál es el propósito principal de utilizar Cisco Packet Tracer en la fase inicial del proyecto?", r: ["Instalar los servidores web definitivos", "Validar el enrutamiento, el esquema IP y la topología teórica antes del despliegue real", "Generar las claves criptográficas de WireGuard", "Configurar las políticas de contraseñas de los usuarios"], c: "Validar el enrutamiento, el esquema IP y la topología teórica antes del despliegue real", e: "Packet Tracer simula el comportamiento de la red, asegurando el diseño lógico." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "En el diseño topológico del proyecto, ¿cuántas zonas lógicas principales se han definido?", r: ["Una única red plana", "Dos: LAN e Internet", "Tres: WAN (Internet), DMZ (Servicios Públicos) y LAN (Red Interna)", "Cuatro: LAN, WLAN, VLAN y VPN"], c: "Tres: WAN (Internet), DMZ (Servicios Públicos) y LAN (Red Interna)", e: "Se divide en tres zonas de confianza diferentes." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "¿Qué dispositivo lógico actúa como barrera directa entre la DMZ y la red interna (LAN)?", r: ["El Switch de la LAN", "El Firewall 2 (Interno)", "El Servidor Nginx", "El Router del ISP"], c: "El Firewall 2 (Interno)", e: "El Firewall 2 protege los equipos internos de la DMZ." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "Físicamente (o de forma virtualizada), ¿qué elemento une el Firewall 1 y el Firewall 2?", r: ["Conexión serie", "Red inalámbrica", "Una red de Interconexión (tránsito) o switch virtual intermedio", "Un túnel WireGuard"], c: "Una red de Interconexión (tránsito) o switch virtual intermedio", e: "Los firewalls deben compartir una subred común de tránsito." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "¿Cuál es la principal ventaja de aislar el servidor Nginx en una DMZ independiente?", r: ["Acelera la base de datos", "Reduce imágenes de VirtualBox", "Limita el impacto de un ataque, evitando el movimiento a la red de los empleados", "Permite usar IPs públicas"], c: "Limita el impacto de un ataque, evitando el movimiento a la red de los empleados", e: "La DMZ aplica el principio de contención, evitando el movimiento lateral." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Cisco Packet Tracer y Topología", u: "Cuestionario", p: "En Packet Tracer, ¿cómo se representa visualmente un enlace VPN?", r: ["Cable de fibra", "Conexión lógica de nube o línea discontinua desde el exterior", "Cable cruzado", "Servidor genérico"], c: "Conexión lógica de nube o línea discontinua desde el exterior", e: "Se representa como conexión virtual a través de la nube." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Qué hipervisor se ha utilizado para el despliegue práctico de las máquinas virtuales?", r: ["VMware ESXi", "Microsoft Hyper-V", "Oracle VM VirtualBox", "Proxmox VE"], c: "Oracle VM VirtualBox", e: "VirtualBox es el hipervisor de tipo 2 elegido." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Qué modo de red de VirtualBox permite conectar VMs entre sí, aislándolas de Internet?", r: ["Red NAT", "Red Interna", "Adaptador Puente", "Adaptador Solo-Anfitrión"], c: "Red Interna", e: "El modo 'Red Interna' crea un switch virtual cerrado." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Qué modo de red se configura en la interfaz WAN del Firewall 1 para tener salida real a Internet?", r: ["Adaptador Puente (Bridged)", "Red Interna", "Controlador genérico", "No conectado"], c: "Adaptador Puente (Bridged)", e: "Conecta la VM directamente a la red física del anfitrión." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Cuántas interfaces de red (adaptadores) necesita activas el Firewall 1 en VirtualBox?", r: ["Solo 1", "2", "3 (WAN, DMZ, Interconexión)", "4"], c: "3 (WAN, DMZ, Interconexión)", e: "Requiere 3 tarjetas: WAN, DMZ e Interconexión." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Cuántas interfaces de red (adaptadores) requiere el Firewall 2 (Interno)?", r: ["1", "2 (Interconexión y LAN)", "3", "4"], c: "2 (Interconexión y LAN)", e: "Solo necesita conectar la red de Interconexión con la LAN." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "Si se clona una máquina virtual, ¿qué parámetro se debe regenerar obligatoriamente?", r: ["Memoria RAM", "Dirección MAC de las tarjetas de red", "Memoria de vídeo", "Nombre del anfitrión"], c: "Dirección MAC de las tarjetas de red", e: "Las MAC duplicadas causan conflictos de capa 2." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Cómo se llama la opción de VirtualBox que permite a una VM capturar todo el tráfico de la red?", r: ["Modo Promiscuo", "Aceleración 3D", "Filtro USB", "Reenvío NAT"], c: "Modo Promiscuo", e: "Permite a la tarjeta aceptar todos los paquetes que circulan." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Entorno de Virtualización", u: "Cuestionario", p: "¿Qué sistema operativo se recomienda usar en las VMs para actuar como Firewalls por su bajo consumo?", r: ["Windows 11", "Distribución GNU/Linux sin entorno gráfico", "macOS", "Windows Server GUI"], c: "Distribución GNU/Linux sin entorno gráfico", e: "Linux CLI consume muy poca memoria RAM, ideal para virtualizar varios nodos." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "Para garantizar la estabilidad de los servicios internos, ¿qué tipo de configuración IP se debe aplicar?", r: ["DHCP", "Direccionamiento IP estático (fijo)", "APIPA", "IP dinámica diaria"], c: "Direccionamiento IP estático (fijo)", e: "IPs estáticas aseguran que las rutas y políticas iptables funcionen de manera predecible." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "En un sistema Linux, ¿qué directiva indica por dónde debe salir el tráfico hacia redes desconocidas?", r: ["address", "netmask", "gateway", "broadcast"], c: "gateway", e: "La directiva 'gateway' define la puerta de enlace predeterminada." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "Si un equipo cliente está en la LAN, ¿cuál será su Gateway?", r: ["IP WAN del FW1", "IP de Nginx", "IP de la interfaz del Firewall 2 conectada a la LAN", "IP del VirtualBox"], c: "IP de la interfaz del Firewall 2 conectada a la LAN", e: "El Firewall 2 es el enrutador inmediato de la LAN." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "Para que una máquina Linux pase tráfico entre tarjetas de red, ¿qué parámetro debe activarse en el kernel?", r: ["net.ipv4.tcp_syncookies = 1", "net.ipv4.ip_forward = 1", "ipv6.disable = 1", "kernel.sysrq = 0"], c: "net.ipv4.ip_forward = 1", e: "Si el IP Forwarding no está activo, Linux descarta los paquetes que no van a su IP." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "El Firewall 1 no conoce cómo llegar a la LAN. ¿Qué configuración requiere?", r: ["DHCP", "Ruta estática apuntando hacia la IP del Firewall 2", "Nginx proxy", "Túnel WireGuard interno"], c: "Ruta estática apuntando hacia la IP del Firewall 2", e: "Necesita enrutamiento estático indicando al FW2 como siguiente salto." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "¿Por qué el Firewall 2 no necesita ruta estática específica para DMZ o Internet?", r: ["Usa OSPF", "Por MAC", "Porque tiene una ruta por defecto (0.0.0.0/0) apuntando al Firewall 1", "Está conectado físicamente"], c: "Porque tiene una ruta por defecto (0.0.0.0/0) apuntando al Firewall 1", e: "Envía todo lo desconocido (0.0.0.0/0) al Firewall 1." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "¿Qué notación representa correctamente una máscara 255.255.255.0?", r: ["/8", "/16", "/24", "/32"], c: "/24", e: "Equivale a 24 bits encendidos en notación CIDR." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Direccionamiento y Enrutamiento", u: "Cuestionario", p: "¿Qué comando clásico de Linux permite comprobar rápidamente la configuración de IPs?", r: ["ping", "ip addr (o ifconfig)", "netstat", "route print"], c: "ip addr (o ifconfig)", e: "Muestran las interfaces de red activas." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "Si un paquete sale del cliente LAN a Internet, ¿cuántos saltos dará en nuestra infraestructura?", r: ["Cero", "Uno", "Dos saltos (Firewall 2 y luego Firewall 1)", "Tres"], c: "Dos saltos (Firewall 2 y luego Firewall 1)", e: "Pasa primero por el FW2 y luego por el FW1." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Qué ocurre si un atacante compromete Nginx en la DMZ?", r: ["Obtiene acceso LAN", "Queda contenido en la DMZ, ya que el FW2 bloquea conexiones hacia la LAN", "La VPN se cae", "El FW1 se apaga"], c: "Queda contenido en la DMZ, ya que el FW2 bloquea conexiones hacia la LAN", e: "El objetivo de la DMZ y FW2 es la contención de intrusos." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "El ping va de LAN a FW1 pero no vuelve. IP Forwarding activo. ¿Cuál es el error más probable?", r: ["Cable desconectado", "Falta la ruta estática en el FW1 para devolver el paquete a la LAN", "Sin MAC", "Nginx apagado"], c: "Falta la ruta estática en el FW1 para devolver el paquete a la LAN", e: "El equipo receptor debe saber la ruta de vuelta." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Qué comando en Linux traza el camino que sigue un paquete salto a salto?", r: ["nslookup", "traceroute", "systemctl", "ssh"], c: "traceroute", e: "Traceroute descubre cada enrutador por el que pasa." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Por qué el puerto 22 de SSH NO debe estar expuesto a Internet en el FW1?", r: ["Consume ancho de banda", "Por motivos de seguridad; la gestión remota debe hacerse vía VPN", "Conflicto Nginx", "VirtualBox lo bloquea"], c: "Por motivos de seguridad; la gestión remota debe hacerse vía VPN", e: "Exponer puertos de gestión invita a ataques de fuerza bruta." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Qué nombre recibe la interfaz virtual con la IP 127.0.0.1?", r: ["eth0", "wlan0", "lo (Loopback)", "ens33"], c: "lo (Loopback)", e: "Localhost permite enviar paquetes a sí mismo." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Dónde se colocaría el servidor de Base de Datos según las mejores prácticas?", r: ["En la WAN", "Con Nginx", "En una DMZ interna o en la LAN, nunca expuesto junto a la web", "En el FW1"], c: "En una DMZ interna o en la LAN, nunca expuesto junto a la web", e: "Arquitectura multinivel: separa DB del frontend (web)." },
+    { m: "Apartado 2: Arquitectura y Diseño", t: "Diagnóstico y Conceptos", u: "Cuestionario", p: "¿Qué garantiza el uso del archivo '/etc/network/interfaces' o 'Netplan'?", r: ["IPs cambian", "Configuración persistente tras reiniciar las máquinas", "Interceptar tráfico", "Actualización automática"], c: "Configuración persistente tras reiniciar las máquinas", e: "Guarda la configuración para que resista reinicios." },
+
+    // --- APARTADO 3 ---
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿Qué es 'iptables' en Linux?", r: ["Protocolo de enrutamiento", "Herramienta para configurar el firewall integrado en el kernel (Netfilter)", "Servidor de monitorización", "Interfaz gráfica"], c: "Herramienta para configurar el firewall integrado en el kernel (Netfilter)", e: "Permite definir reglas de filtrado directamente en el módulo Netfilter." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿Qué significa aplicar una política 'DROP' por defecto en iptables?", r: ["Todo se permite salvo excepciones", "Se bloquea absolutamente todo el tráfico que no coincida con una regla que lo permita", "Redirige al puerto 80", "Apaga el firewall"], c: "Se bloquea absolutamente todo el tráfico que no coincida con una regla que lo permita", e: "DROP descarta silenciosamente cualquier paquete no autorizado." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿En qué tabla de iptables se configuran habitualmente las políticas de bloqueo/permiso?", r: ["Tabla nat", "Tabla mangle", "Tabla filter", "Tabla raw"], c: "Tabla filter", e: "La tabla 'filter' se encarga del filtrado de paquetes (INPUT, FORWARD, OUTPUT)." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿Para qué tráfico se utiliza la cadena 'INPUT'?", r: ["Atraviesa el firewall", "Generado por el firewall", "Destino final es una IP del propio equipo firewall (tráfico local)", "Traducción NAT"], c: "Destino final es una IP del propio equipo firewall (tráfico local)", e: "Evalúa paquetes dirigidos a la propia máquina." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿Cuál es la función de la cadena 'FORWARD' en un router/firewall?", r: ["Filtrar los paquetes que entran por una interfaz y salen por otra (en tránsito)", "Bloquear loopback", "Enmascarar origen", "Permitir actualizaciones"], c: "Filtrar los paquetes que entran por una interfaz y salen por otra (en tránsito)", e: "Controla el tráfico en tránsito (ej. WAN a DMZ o LAN a WAN)." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Fundamentos y Políticas", u: "Cuestionario", p: "¿Qué permiten las reglas basadas en el módulo 'state' (ESTABLISHED, RELATED)?", r: ["Conexiones nuevas", "Bloquear DoS", "Permiten el tráfico de retorno de conexiones ya iniciadas legítimamente", "Forzar traducción de puertos"], c: "Permiten el tráfico de retorno de conexiones ya iniciadas legítimamente", e: "La inspección de estado deja entrar las respuestas a peticiones salientes." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 1 (Perimetral)", u: "Cuestionario", p: "¿Por qué es recomendable implementar iptables mediante un script Bash (.sh)?", r: ["Solo funciona en Bash", "Para poder comentarlo, modificarlo fácilmente y ejecutarlo al arrancar", "Aumenta la velocidad", "Encripta reglas"], c: "Para poder comentarlo, modificarlo fácilmente y ejecutarlo al arrancar", e: "Facilita la administración y la carga automática al reiniciar." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 1 (Perimetral)", u: "Cuestionario", p: "¿Qué función cumple el comando 'iptables -F' al inicio del script?", r: ["Fijar reglas permanentes", "Reinicio de interfaces", "Eliminar (Flush) todas las reglas existentes para partir de cero", "Filtrar tráfico"], c: "Eliminar (Flush) todas las reglas existentes para partir de cero", e: "Limpia la configuración en memoria para evitar conflictos y duplicados." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 1 (Perimetral)", u: "Cuestionario", p: "¿Qué acción toma el FW1 ante un intento SSH (puerto 22) directamente desde Internet?", r: ["Aplica una regla DROP, bloqueando la conexión silenciosamente", "Acepta la conexión", "Redirige a Nginx", "Pide certificado digital"], c: "Aplica una regla DROP, bloqueando la conexión silenciosamente", e: "El FW1 bloquea el puerto 22 en la WAN." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 1 (Perimetral)", u: "Cuestionario", p: "Para establecer la VPN, ¿qué regla debe figurar en la cadena INPUT del FW1?", r: ["TCP 80", "Permitir tráfico UDP al puerto 51820 desde cualquier origen", "Tráfico ICMP", "Redirigir 443"], c: "Permitir tráfico UDP al puerto 51820 desde cualquier origen", e: "El FW1 necesita aceptar conexiones entrantes en el puerto de escucha de WireGuard." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 1 (Perimetral)", u: "Cuestionario", p: "Para evitar responder a escaneos masivos en Internet (ping), ¿qué se hace?", r: ["Permitir ICMP WAN", "Bloquear o limitar el protocolo ICMP (ping) en la interfaz conectada al exterior", "Cambiar puerto ping", "Desinstalar TCP/IP"], c: "Bloquear o limitar el protocolo ICMP (ping) en la interfaz conectada al exterior", e: "Hace al firewall 'invisible' a escaneos superficiales de red." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "¿En qué tabla se configuran exclusivamente las reglas de traducción (SNAT/DNAT)?", r: ["Tabla filter", "Tabla nat", "Tabla raw", "Tabla mangle"], c: "Tabla nat", e: "La tabla 'nat' está diseñada para alterar las IPs y puertos de los paquetes." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "¿Qué hace exactamente una regla SNAT?", r: ["Cambia la dirección IP de origen de un paquete por otra IP", "Modifica MAC", "Encripta carga útil", "Cambia puerto destino"], c: "Cambia la dirección IP de origen de un paquete por otra IP", e: "Sustituye la IP privada del cliente por la IP pública del firewall." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "¿En qué cadena de la tabla nat se configuran las reglas SNAT/MASQUERADE?", r: ["PREROUTING", "INPUT", "FORWARD", "POSTROUTING"], c: "POSTROUTING", e: "Ocurre en POSTROUTING, justo antes de que el paquete abandone el firewall." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "¿Por qué con IP pública dinámica se prefiere MASQUERADE a SNAT estático?", r: ["Es más rápido", "Lee automáticamente la IP actual de la interfaz de salida, evitando fallos si el ISP cambia la IP", "Esconde puertos", "SNAT no funciona virtual"], c: "Lee automáticamente la IP actual de la interfaz de salida, evitando fallos si el ISP cambia la IP", e: "Evalúa la IP en tiempo real, ideal para conexiones WAN dinámicas." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "Si no se aplicara MASQUERADE en el FW1, ¿qué sucedería al navegar a Google?", r: ["Iría más rápido", "Llegaría a Google con una IP privada (192.168.x.x) y los routers de Internet descartarían el paquete", "Google asigna IP pública", "Redirige a Nginx"], c: "Llegaría a Google con una IP privada (192.168.x.x) y los routers de Internet descartarían el paquete", e: "Las IPs privadas no son enrutables en Internet sin traducción NAT." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Reglas NAT y SNAT", u: "Cuestionario", p: "¿Es necesario aplicar MASQUERADE para el tráfico interno entre LAN y DMZ?", r: ["Sí", "No, el tráfico interno entre redes privadas conocidas se resuelve mediante enrutamiento estándar", "Solo si Nginx cae", "Sí, lo exige FW2"], c: "No, el tráfico interno entre redes privadas conocidas se resuelve mediante enrutamiento estándar", e: "Conservar las IPs originales internamente permite a los servidores identificar el origen real." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Redirección y DNAT", u: "Cuestionario", p: "¿Qué significa DNAT en publicación de servicios web?", r: ["Cambiar IP origen", "Cambiar la dirección IP pública y puerto a la que llega el paquete por la IP privada real del servidor interno", "Bloquear DoS", "Encriptar"], c: "Cambiar la dirección IP pública y puerto a la que llega el paquete por la IP privada real del servidor interno", e: "Intercepta tráfico público y lo redirige a la máquina en la red interna/DMZ." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Redirección y DNAT", u: "Cuestionario", p: "¿En qué cadena de la tabla nat se configuran las reglas DNAT?", r: ["POSTROUTING", "FORWARD", "INPUT", "PREROUTING"], c: "PREROUTING", e: "Debe ocurrir antes de la decisión de enrutamiento (PREROUTING)." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Redirección y DNAT", u: "Cuestionario", p: "Cuando un cliente teclea la IP pública al puerto 80, ¿qué hace el FW1?", r: ["Aplica DNAT y cambia la IP de destino hacia el servidor Nginx en la DMZ", "Responde con Apache", "Descarta por DROP", "Reenvía a LAN"], c: "Aplica DNAT y cambia la IP de destino hacia el servidor Nginx en la DMZ", e: "Captura la petición pública y la manda a la máquina de la DMZ." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Redirección y DNAT", u: "Cuestionario", p: "Además de la tabla nat, ¿qué otra regla es imprescindible para DNAT?", r: ["INPUT puerto 80", "Una regla en FORWARD (tabla filter) que permita el paso del paquete hacia el servidor interno", "Quitar inspección de estado", "Reiniciar DNS"], c: "Una regla en FORWARD (tabla filter) que permita el paso del paquete hacia el servidor interno", e: "El paquete traducido debe atravesar el firewall, por lo que requiere un ACCEPT en FORWARD." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Redirección y DNAT", u: "Cuestionario", p: "¿Cuál es el beneficio de seguridad de usar DNAT en lugar de dar IP pública al servidor?", r: ["Carga más rápido", "Oculta la topología interna y la IP real del servidor frente a Internet", "Evita pagar licencias", "Activa WireGuard"], c: "Oculta la topología interna y la IP real del servidor frente a Internet", e: "El atacante solo interactúa con el firewall y desconoce la arquitectura interna." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Cuál es la regla de oro de contención del FW2 respecto a la DMZ?", r: ["Permitir backups", "Bloquear categóricamente cualquier intento de conexión iniciada desde la DMZ hacia la red LAN", "NAT masivo", "Permitir ping"], c: "Bloquear categóricamente cualquier intento de conexión iniciada desde la DMZ hacia la red LAN", e: "Impide el movimiento lateral de un atacante desde un servidor web comprometido." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "Si un equipo LAN quiere actualizar la web, ¿el FW2 debe permitirlo?", r: ["No", "Sí, permitir el tráfico en FORWARD originado en la LAN con destino a la DMZ", "Solo con root", "Solo por VPN"], c: "Sí, permitir el tráfico en FORWARD originado en la LAN con destino a la DMZ", e: "La confianza fluye de mayor (LAN) a menor (DMZ)." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Cómo devuelve Nginx la web a la LAN si no puede iniciar conexiones?", r: ["Abriendo puertos", "Mediante la regla de paquetes en estado ESTABLISHED y RELATED", "Enrutamiento asimétrico", "Cambiando IP"], c: "Mediante la regla de paquetes en estado ESTABLISHED y RELATED", e: "La inspección de estado permite la respuesta de una conexión ya validada." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "Para el tráfico de la LAN a Internet, ¿qué hace el FW2?", r: ["Bloquea", "Permite el paso (FORWARD ACCEPT) hacia el exterior y luego FW1 aplicará SNAT", "Redirige a DMZ", "Encripta local"], c: "Permite el paso (FORWARD ACCEPT) hacia el exterior y luego FW1 aplicará SNAT", e: "FW2 es enrutador interno; deja pasar el tráfico legítimo hacia FW1." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Qué comando muestra contadores en vivo para auditar reglas que bloquean ataques?", r: ["iptables -F", "iptables -L -n -v", "iptables --version", "iptables-save"], c: "iptables -L -n -v", e: "La opción '-v' muestra contadores de paquetes y bytes interceptados por cada regla." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Qué ventaja tiene usar dos Firewalls separados?", r: ["Consumo eléctrico", "Defensa en profundidad: si cae FW1, aún deben superar FW2 para llegar a LAN", "Menor memoria", "Sin rutas estáticas"], c: "Defensa en profundidad: si cae FW1, aún deben superar FW2 para llegar a LAN", e: "Añade capas de seguridad mitigando el riesgo si se compromete el perímetro." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Cómo evalúa iptables las reglas dentro de una cadena (ej. FORWARD)?", r: ["De abajo a arriba", "De forma secuencial (de arriba a abajo) y se detiene en la primera coincidencia", "Todas a la vez", "Primero las restrictivas"], c: "De forma secuencial (de arriba a abajo) y se detiene en la primera coincidencia", e: "El orden es crítico; una regla general arriba anula una específica debajo." },
+    { m: "Apartado 3: Iptables y Seguridad Perimetral", t: "Firewall 2 y Aislamiento", u: "Cuestionario", p: "¿Dónde se ubican en el script las reglas de estado ESTABLISHED/RELATED?", r: ["Al final", "Lo más arriba posible para mejorar el rendimiento del firewall", "Solo en tabla nat", "No se incluyen"], c: "Lo más arriba posible para mejorar el rendimiento del firewall", e: "Evita que el firewall procese iterativamente paquetes que ya pertenecen a un flujo validado." },
+
+    // --- APARTADO 4 ---
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "¿Qué tipo de arquitectura usa WireGuard para la autenticación?", r: ["Clave simétrica", "Criptografía de clave pública (asimétrica o de curva elíptica)", "Certificados X.509", "Dirección MAC"], c: "Criptografía de clave pública (asimétrica o de curva elíptica)", e: "Funciona mediante un intercambio de claves públicas y privadas entre nodos." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "¿Qué comando de terminal genera la clave privada de WireGuard?", r: ["wg-quick", "openssl", "wg genkey", "ssh-keygen"], c: "wg genkey", e: "Genera una clave privada en base64 para el nodo local." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "¿Cómo se obtiene la clave pública de WireGuard?", r: ["De un servidor DNS", "Pasando la clave privada por el comando 'wg pubkey'", "Aleatoria", "Del archivo shadow"], c: "Pasando la clave privada por el comando 'wg pubkey'", e: "La clave pública se deriva matemáticamente de la privada." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "En la arquitectura de WireGuard, ¿hay 'servidor' y 'cliente' estrictos?", r: ["Sí", "No, funciona bajo un modelo 'peer-to-peer' donde todos los nodos son similares", "Solo el servidor cifra", "No hay servidores"], c: "No, funciona bajo un modelo 'peer-to-peer' donde todos los nodos son similares", e: "Es P2P, la diferencia servidor/cliente es solo un concepto lógico de quién inicia la conexión." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "¿Qué protocolo de transporte usa WireGuard por defecto?", r: ["TCP", "ICMP", "UDP", "GRE"], c: "UDP", e: "Usa UDP (ej. puerto 51820) por menor sobrecarga y velocidad." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Fundamentos Criptográficos", u: "Cuestionario", p: "¿Cuál es una de las ventajas de rendimiento de WireGuard?", r: ["Usa navegadores", "Se ejecuta directamente en el espacio del kernel (Kernel-space) de Linux", "No cifra tráfico", "Usa tarjeta gráfica"], c: "Se ejecuta directamente en el espacio del kernel (Kernel-space) de Linux", e: "Al vivir en el kernel evita cambios de contexto haciéndolo rápido y ligero." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "¿Cómo se llama el primer archivo de configuración de interfaz de WireGuard?", r: ["vpn1.conf", "wireguard.ini", "wg0.conf", "tunnel.cfg"], c: "wg0.conf", e: "Por convención, el primer túnel es wg0 y reside en /etc/wireguard/wg0.conf." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "En wg0.conf, ¿qué sección define la configuración de la máquina local?", r: ["[Server]", "[Peer]", "[Local]", "[Interface]"], c: "[Interface]", e: "La sección [Interface] define los parámetros propios del nodo (puerto, IP, clave privada)." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "¿Qué sección de wg0.conf define los otros equipos autorizados a conectarse?", r: ["[Peer]", "[Client]", "[Network]", "[Endpoint]"], c: "[Peer]", e: "Cada nodo remoto autorizado se declara en su bloque [Peer]." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "En el servidor (FW1), ¿qué parámetro indica el puerto de escucha?", r: ["Port", "ListenPort", "EndpointPort", "BindPort"], c: "ListenPort", e: "Define el puerto UDP (ej. 51820) donde espera conexiones." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "¿Qué directivas inyectan reglas de iptables al levantar/apagar la VPN?", r: ["PreUp / PreDown", "StartScript", "PostUp y PostDown", "OnBoot"], c: "PostUp y PostDown", e: "Permiten ejecutar comandos como NAT cuando el túnel arranca/termina." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "En el servidor, ¿qué significa 'AllowedIPs = 10.0.0.2/32' en un [Peer]?", r: ["El servidor usa 10.0.0.2", "Permite a ese cliente usar única y exclusivamente esa IP dentro del túnel", "Cliente accede a todo", "DHCP"], c: "Permite a ese cliente usar única y exclusivamente esa IP dentro del túnel", e: "El Cripto-routing de WireGuard asocia estrictamente esa IP cifrada a esa clave pública." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Servidor", u: "Cuestionario", p: "¿Qué directiva obligatoria identifica criptográficamente al nodo remoto en [Peer]?", r: ["PrivateKey", "PublicKey", "PresharedKey", "Certificate"], c: "PublicKey", e: "Se requiere la clave pública del dispositivo remoto." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "En wg0.conf del CLIENTE, ¿qué contiene el campo 'PrivateKey' en [Interface]?", r: ["Clave del FW1", "Clave pública", "La clave privada generada para ese equipo cliente", "Contraseña plana"], c: "La clave privada generada para ese equipo cliente", e: "Cada dispositivo aloja su propia clave secreta." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "En el cliente, ¿qué parámetro indica la IP pública del servidor para conectar?", r: ["ServerIP", "Endpoint", "Host", "Gateway"], c: "Endpoint", e: "Apunta a la IP/dominio y puerto del servidor remoto." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "¿Qué valor en 'AllowedIPs' del cliente configura el 'Full Tunneling'?", r: ["192.168.1.0/24", "10.0.0.0/24", "0.0.0.0/0", "255.255.255.255"], c: "0.0.0.0/0", e: "0.0.0.0/0 enruta TODO el tráfico del empleado por la VPN." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "Para 'Split Tunneling' (solo tráfico de oficina a VPN), ¿qué ponemos en AllowedIPs?", r: ["0.0.0.0/0", "127.0.0.1", "Solo las subredes internas de la empresa (ej. 192.168.10.0/24)", "Split"], c: "Solo las subredes internas de la empresa (ej. 192.168.10.0/24)", e: "Se cifran solo los paquetes dirigidos a las IPs de la empresa." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "En Full Tunneling, para resolver nombres, ¿qué parámetro se añade al [Interface]?", r: ["DNS", "NameServer", "ResolveTo", "EndpointDNS"], c: "DNS", e: "Se debe especificar un servidor DNS interno o confiable para evitar pérdidas de resolución." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "Si el empleado cambia de WiFi a datos móviles (Roaming), ¿qué ocurre con WireGuard?", r: ["Cae la VPN", "Cambia Endpoint", "La conexión se mantiene transparente y sin cortes", "Se bloquea"], c: "La conexión se mantiene transparente y sin cortes", e: "WireGuard valida por clave criptográfica, no por la IP origen, actualizando el túnel automáticamente." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Configuración y Cliente", u: "Cuestionario", p: "Si llega un paquete al UDP de WireGuard sin la firma criptográfica correcta:", r: ["Auth Failed", "Pide certificado", "El servidor descarta el paquete silenciosamente (Drop) sin responder", "Redirige puerto 80"], c: "El servidor descarta el paquete silenciosamente (Drop) sin responder", e: "Ignora paquetes inválidos, haciéndolo invisible a escaneos." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué parámetro en el cliente envía un paquete vacío para evitar que el NAT cierre el túnel?", r: ["KeepAlive", "PingInterval", "PersistentKeepalive", "NAT-Traversal"], c: "PersistentKeepalive", e: "Mantiene la tabla NAT del router abierta." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Cada cuántos segundos es estándar el 'PersistentKeepalive'?", r: ["1 segundo", "25 segundos", "5 minutos", "1 hora"], c: "25 segundos", e: "25 segundos es lo recomendado para evitar cierres de routers NAT." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué herramienta levanta la interfaz leyendo el wg0.conf?", r: ["systemctl", "wg-quick up wg0", "ifup", "ip link"], c: "wg-quick up wg0", e: "Simplifica la gestión, configurando enrutamiento e interfaz." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué comando visualiza en tiempo real el estado de WireGuard y peers conectados?", r: ["ifconfig", "ping", "wg show (o 'wg')", "netstat"], c: "wg show (o 'wg')", e: "Muestra claves, endpoints, tráfico y handshakes." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué término describe el intercambio exitoso de claves entre dos nodos?", r: ["Handshake (Apretón de manos)", "Three-way TCP", "Token Ring", "Authentication ACK"], c: "Handshake (Apretón de manos)", e: "Un 'latest handshake' reciente asegura que la criptografía funciona." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué requisito del kernel es obligatorio en el FW1 para reenviar tráfico VPN a LAN?", r: ["Nginx", "Activar el IP Forwarding (net.ipv4.ip_forward = 1)", "Modo Promiscuo", "SELinux"], c: "Activar el IP Forwarding (net.ipv4.ip_forward = 1)", e: "Sin IP Forwarding, el Firewall descarta paquetes dirigidos a otra red." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Soporta WireGuard asignación DHCP dinámica de IPs?", r: ["Sí", "Solo en Windows", "No, requiere IPs estáticas para el Cripto-routing", "Con OSPF"], c: "No, requiere IPs estáticas para el Cripto-routing", e: "Asocia IPs estáticas (AllowedIPs) a claves públicas para seguridad." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Dónde se guardan los archivos de WireGuard por seguridad en Linux?", r: ["/var/www/html", "Escritorio", "En /etc/wireguard/ con permisos restringidos", "/tmp/"], c: "En /etc/wireguard/ con permisos restringidos", e: "Contienen claves privadas y deben ser accesibles solo por root." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "Si un empleado por VPN intenta conectarse por SSH al servidor DMZ, ¿cuántos Firewalls atraviesa?", r: ["Ninguno", "Solo el Firewall 1", "El Firewall 1 y 2", "Tres"], c: "Solo el Firewall 1", e: "Entra por VPN al FW1 y se enruta directo a la DMZ." },
+    { m: "Apartado 4: VPN y WireGuard", t: "Mantenimiento y Comandos", u: "Cuestionario", p: "¿Qué protocolo interno usa WireGuard para el cifrado?", r: ["RSA-2048", "Noise Protocol Framework (Curve25519, ChaCha20)", "AES-128", "MD5"], c: "Noise Protocol Framework (Curve25519, ChaCha20)", e: "Usa algoritmos modernos y ultrarrápidos integrados en Noise." },
+
+    // --- APARTADO 5 ---
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "¿Cuál es la característica principal de Nginx frente a Apache?", r: ["Usa Java", "Procesos por conexión", "Arquitectura asíncrona y orientada a eventos (maneja miles de conexiones con poca RAM)", "Software privativo"], c: "Arquitectura asíncrona y orientada a eventos (maneja miles de conexiones con poca RAM)", e: "Destaca por su extrema ligereza bajo concurrencia, ideal para virtualización." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "¿En qué zona de la red se sitúa el servidor Nginx público?", r: ["Interconexión", "LAN", "WAN", "En la DMZ (Zona Desmilitarizada)"], c: "En la DMZ (Zona Desmilitarizada)", e: "Evita acceso directo a la LAN si el servidor es hackeado." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "¿Qué tecnologías base utiliza el portal web corporativo estático?", r: ["PHP/MySQL", "HTML5 y CSS3", "React/Node", "Python/Django"], c: "HTML5 y CSS3", e: "Web estática servida directamente por Nginx." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "En Ubuntu, ¿dónde se alojan por defecto los archivos web públicos?", r: ["/etc/nginx/", "/home/", "/var/www/html", "/usr/share/"], c: "/var/www/html", e: "El DocumentRoot clásico de Nginx y Apache." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "¿Qué puerto de transporte debe estar abierto en Nginx para tráfico web estándar?", r: ["TCP 80", "TCP 443", "UDP 53", "TCP 22"], c: "TCP 80", e: "HTTP estándar opera en el puerto TCP 80." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Fundamentos Web", u: "Cuestionario", p: "¿Bajo qué usuario se ejecutan los 'worker' de Nginx en Debian/Ubuntu?", r: ["root", "admin", "nginx_user", "www-data"], c: "www-data", e: "Delega en www-data (sin privilegios) para proteger el OS." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "¿Qué función cumple un Proxy Inverso?", r: ["Filtra empleados", "Recibe peticiones externas y las envía a servidores backend, ocultando su estructura", "Bloquea SQL", "Traduce MAC"], c: "Recibe peticiones externas y las envía a servidores backend, ocultando su estructura", e: "El cliente interactúa con Nginx sin saber qué máquina genera la página." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "¿Qué directiva de Nginx lo configura como proxy inverso hacia otro servidor?", r: ["redirect_to", "proxy_pass", "forward_ip", "backend_set"], c: "proxy_pass", e: "Instruye a Nginx pasar la petición a un backend." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "¿Cómo se llama el archivo principal de Nginx con parámetros globales?", r: ["/etc/nginx/nginx.conf", "/var/www/config.php", "/etc/hosts", "default"], c: "/etc/nginx/nginx.conf", e: "Es el núcleo donde se configuran módulos y directivas globales." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "¿Para qué sirve el bloque 'server { ... }' en Nginx?", r: ["Reglas firewall", "Usuarios", "Definir un Servidor Virtual indicando puerto, dominio y rutas", "Red"], c: "Definir un Servidor Virtual indicando puerto, dominio y rutas", e: "Permite alojar múltiples webs en una máquina (Virtual Host)." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "¿Qué directiva define el dominio al que responde Nginx?", r: ["domain_name", "server_name", "host_url", "listen"], c: "server_name", e: "Compara con la cabecera HTTP del cliente." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Proxy Inverso", u: "Cuestionario", p: "Si se busca un dominio no definido, ¿qué hace Nginx?", r: ["Devuelve el primer bloque server o el default_server", "Bloquea IP", "Reinicia Linux", "Pide SSH"], c: "Devuelve el primer bloque server o el default_server", e: "Actúa como un 'atrapalotodo' si no hay coincidencia exacta." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "¿Qué estrategia ligera resuelve dominios sin servidor DNS (BIND9)?", r: ["Comprar dominio", "Modificar el archivo /etc/hosts en los equipos", "Base Nginx", "NetBIOS"], c: "Modificar el archivo /etc/hosts en los equipos", e: "Simula un DNS para laboratorios o redes pequeñas." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "¿Formato correcto en /etc/hosts?", r: ["Dominio IP", "IP Nombre_de_dominio", "DNS= IP=", "URL:"], c: "IP Nombre_de_dominio", e: "Primero IP y luego el nombre a resolver." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "Para acceder por nombre desde la LAN, ¿dónde se edita el /etc/hosts?", r: ["En Nginx", "En el /etc/hosts del propio equipo cliente en la LAN", "En FW1", "En ISP"], c: "En el /etc/hosts del propio equipo cliente en la LAN", e: "El origen de la petición necesita saber traducir el nombre." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "¿Desventaja de depender de /etc/hosts en una gran empresa?", r: ["Ancho banda", "Obsoleto", "Carece de escalabilidad, hay que cambiar todos los equipos a mano", "Bloqueo firewall"], c: "Carece de escalabilidad, hay que cambiar todos los equipos a mano", e: "No está centralizado." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "¿Equivalente en Windows al /etc/hosts?", r: ["C:\\Windows\\System32\\drivers\\etc\\hosts", "C:\\hosts.txt", "Panel Control", "C:\\Windows\\DNS\\hosts"], c: "C:\\Windows\\System32\\drivers\\etc\\hosts", e: "Misma convención de UNIX heredada." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "DNS Estático", u: "Cuestionario", p: "Si pones '127.0.0.1 google.com' en hosts:", r: ["Se corrompe", "Va más rápido", "Intenta cargar la máquina local (loopback) en vez de Internet", "Error"], c: "Intenta cargar la máquina local (loopback) en vez de Internet", e: "El OS consulta hosts antes del DNS externo." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "¿Por qué ocultar la versión de Nginx?", r: ["Ahorra banda", "Impide que los atacantes busquen vulnerabilidades de esa versión exacta", "RGPD", "Compatibilidad"], c: "Impide que los atacantes busquen vulnerabilidades de esa versión exacta", e: "Evita la explotación de fallos conocidos (Security through obscurity)." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "¿Qué directiva oculta la versión en la cabecera?", r: ["hide_version", "server_tokens off;", "version_display", "security_headers"], c: "server_tokens off;", e: "Responde solo con 'nginx'." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "¿Permisos (chmod) recomendados para archivos web?", r: ["777", "644 para archivos (lectura) y 755 para directorios", "000", "400"], c: "644 para archivos (lectura) y 755 para directorios", e: "El usuario web solo necesita leer, nadie debe poder escribir." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "¿Qué directiva previene listar los archivos si no hay index?", r: ["hide_files", "directory_privacy", "autoindex off;", "index block"], c: "autoindex off;", e: "Evita explorar el árbol de carpetas (Directory Listing)." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "A nivel firewall, si Nginx usa HTTP, ¿cómo se bastiona?", r: ["Abrir 80, 443, 8080", "DNAT estricto para puerto 80 TCP y descartar el resto hacia la DMZ", "Permitir todos", "Puerto 22"], c: "DNAT estricto para puerto 80 TCP y descartar el resto hacia la DMZ", e: "Principio de mínimo privilegio." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Hardening y Bastionado", u: "Cuestionario", p: "¿Dónde se guardan los enlaces de los Virtual Hosts ACTIVOS?", r: ["sites-available", "/etc/nginx/sites-enabled", "conf.d", "html"], c: "/etc/nginx/sites-enabled", e: "Se crean en sites-available y se activan (symlink) en sites-enabled." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "¿Qué directiva habilita el portal básico de métricas Nginx?", r: ["server_status", "stub_status", "monitor_nginx", "dashboard_on"], c: "stub_status", e: "Expone una página con métricas en tiempo real." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "¿Qué indica 'Active connections'?", r: ["Visitas históricas", "Espacio en disco", "Número de conexiones abiertas y activas que procesa en ese momento", "Temperatura"], c: "Número de conexiones abiertas y activas que procesa en ese momento", e: "Ayuda a detectar ataques DoS o picos de tráfico." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "¿Cómo se restringe el acceso a la monitorización?", r: ["Contraseña", "allow IP_ADMIN; deny all;", "filter IP;", "block_public"], c: "allow IP_ADMIN; deny all;", e: "Bloquea internet y permite solo a la IP/Red de gestión." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "Antes de reiniciar Nginx tras un cambio, ¿qué comando valida la sintaxis?", r: ["nginx -r", "nginx -t", "systemctl status", "nginx --check"], c: "nginx -t", e: "El test avisa de errores, evitando que se caiga el servicio." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "¿Comando para aplicar cambios sin cerrar conexiones (Zero-downtime)?", r: ["restart", "stop", "systemctl reload nginx (o nginx -s reload)", "kill"], c: "systemctl reload nginx (o nginx -s reload)", e: "Reload carga la configuración suavemente sin desconectar usuarios." },
+    { m: "Apartado 5: Nginx y Monitorización", t: "Monitorización (stub_status)", u: "Cuestionario", p: "¿Dónde guarda Nginx sus logs por defecto?", r: ["/var/www/logs", "/etc/logs", "/var/log/nginx/access.log y error.log", "/var/monitor"], c: "/var/log/nginx/access.log y error.log", e: "Registra el tráfico en access y los fallos en error." },
+
+    // --- APARTADO 6 ---
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Planificación Temporal", u: "Cuestionario", p: "¿Qué herramienta gráfica representa el cronograma del TFG?", r: ["Ishikawa", "Diagrama de Gantt", "Esquema físico", "Flujo de Datos"], c: "Diagrama de Gantt", e: "Muestra el desarrollo de fases en el tiempo." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Planificación Temporal", u: "Cuestionario", p: "¿Qué fase precede a la implementación virtual?", r: ["Conclusiones", "Monitorización", "Diseño lógico y pruebas previas en Cisco Packet Tracer", "Licencias"], c: "Diseño lógico y pruebas previas en Cisco Packet Tracer", e: "Se simulan las redes antes de montar VirtualBox." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Planificación Temporal", u: "Cuestionario", p: "¿Por qué definir hitos (milestones)?", r: ["Aumentar coste", "Marcar puntos de control para evaluar si se cumplen requisitos", "Cambiar topología", "Instalar VMs"], c: "Marcar puntos de control para evaluar si se cumplen requisitos", e: "Aseguran que los componentes críticos funcionan antes de avanzar." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Planificación Temporal", u: "Cuestionario", p: "¿Qué fase debe ser transversal a todo el desarrollo?", r: ["Documentación técnica e incidencias", "Juegos", "Cambio contraseñas", "Hardware"], c: "Documentación técnica e incidencias", e: "Documentar es vital para el mantenimiento futuro." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Planificación Temporal", u: "Cuestionario", p: "¿Cuál es el posible 'cuello de botella' inicial técnico?", r: ["Instalar SO", "Índice", "Configuración del enrutamiento base (IP Forwarding y rutas)", "Descarga ISO"], c: "Configuración del enrutamiento base (IP Forwarding y rutas)", e: "Sin enrutamiento correcto, los servicios superiores no funcionan." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Qué partida se redujo a 0€?", r: ["Mano de obra", "Hardware", "Coste de licenciamiento de software", "Electricidad"], c: "Coste de licenciamiento de software", e: "El uso de Open Source elimina la compra de licencias." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Cuál suele ser el mayor coste en este proyecto con software libre?", r: ["Base datos", "Costes de personal (horas del Administrador/Ingeniero)", "Patentes", "Dominios"], c: "Costes de personal (horas del Administrador/Ingeniero)", e: "La principal inversión es el conocimiento y tiempo técnico." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Componentes del coste de hardware?", r: ["Teclados 4K", "Servidores host y electrónica de red (Routers/Switches)", "Licencias Windows", "Impresoras"], c: "Servidores host y electrónica de red (Routers/Switches)", e: "Se necesita la máquina base de VMs y la red física." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Por qué VirtualBox mejora la viabilidad económica?", r: ["Velocidad", "Permite ejecutar múltiples servidores lógicos en una máquina física, ahorrando hardware", "Regala licencias", "No consumen RAM"], c: "Permite ejecutar múltiples servidores lógicos en una máquina física, ahorrando hardware", e: "Consolida servidores reduciendo la inversión." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Qué concepto económico se asocia al desgaste del servidor?", r: ["La amortización o depreciación del hardware", "Dividendos", "Retorno", "Coste HTML"], c: "La amortización o depreciación del hardware", e: "El equipo pierde valor, prorrateándose su coste." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Conclusión general de la viabilidad?", r: ["Inviable", "Altamente viable, seguridad empresarial a coste PYME", "Requiere capital externo", "Solo en Windows"], c: "Altamente viable, seguridad empresarial a coste PYME", e: "Un diseño lógico e IA/Software Libre lo hacen accesible." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "¿Ventaja de usar /etc/hosts frente a BIND9?", r: ["Caro pero seguro", "Reduce consumo de recursos (RAM/CPU) en una red pequeña", "Vender dominio", "Aumenta mantenimiento"], c: "Reduce consumo de recursos (RAM/CPU) en una red pequeña", e: "Evita desplegar servicios pesados en un laboratorio." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Costes y Viabilidad", u: "Cuestionario", p: "Tras la implantación, ¿qué servicio genera coste periódico?", r: ["Mantenimiento, actualizaciones y auditoría del sistema", "Compra de Nginx", "Licencias iptables", "Alquiler Tracer"], c: "Mantenimiento, actualizaciones y auditoría del sistema", e: "El sistema requiere horas técnicas constantes (parcheo)." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Justificación Tecnológica", u: "Cuestionario", p: "¿Ventaja de usar Linux sin entorno gráfico (CLI)?", r: ["Bonito", "Comandos difíciles", "Menor consumo de recursos y minimiza superficie de ataque", "Obliga ratón"], c: "Menor consumo de recursos y minimiza superficie de ataque", e: "Al tener menos paquetes, tiene menos vulnerabilidades (Server Core)." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Justificación Tecnológica", u: "Cuestionario", p: "¿Qué justifica separar el FW1 y el FW2?", r: ["Dificultad", "Aplicar el principio de Defensa en Profundidad", "Límite iptables", "Gastar dinero"], c: "Aplicar el principio de Defensa en Profundidad", e: "Un atacante debe superar múltiples barreras." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Justificación Tecnológica", u: "Cuestionario", p: "¿Por qué Nginx es más escalable a futuro que Apache?", r: ["Cuesta menos", "Facilidad para actuar como Balanceador de Carga bajo alta concurrencia", "Español", "Usa puerto 80"], c: "Facilidad para actuar como Balanceador de Carga bajo alta concurrencia", e: "Nginx no es solo un servidor web, también un load balancer nativo." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Justificación Tecnológica", u: "Cuestionario", p: "¿Cómo cumple la solución la triada CIA de seguridad?", r: ["No cumple", "Redes planas", "VPN (Confidencialidad), DMZ (Integridad), Nginx (Disponibilidad)", "Vende datos"], c: "VPN (Confidencialidad), DMZ (Integridad), Nginx (Disponibilidad)", e: "Equilibra el cifrado, las políticas estrictas y el alto rendimiento." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "En el TFG, ¿cuál es la principal expansión geográfica?", r: ["Mover a USA", "Apertura e integración de una nueva sede física en Córdoba", "Cerrar sede central", "Fibra WireGuard"], c: "Apertura e integración de una nueva sede física en Córdoba", e: "Plantea integrar una sucursal en Córdoba." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "¿Cómo se conectaría la sede de Córdoba con Madrid?", r: ["Cable largo", "Túnel VPN 'Site-to-Site' usando WireGuard", "Web pública", "WiFi"], c: "Túnel VPN 'Site-to-Site' usando WireGuard", e: "Una VPN Sede a Sede permite que los routers intercambien la LAN de ambas." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "En un Site-to-Site, ¿cómo configuran el AllowedIPs?", r: ["Solo Madrid clave privada", "Ambos son 'Peers' apuntando sus subredes en AllowedIPs", "Puerto 80", "Sin encriptación"], c: "Ambos son 'Peers' apuntando sus subredes en AllowedIPs", e: "Ambos actúan como pares intercambiando sus subredes." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "¿Qué problema evita la 'Alta Disponibilidad' (HA)?", r: ["Consumo eléctrico", "El punto único de fallo (Single Point of Failure)", "Redes sociales", "Web rápida"], c: "El punto único de fallo (Single Point of Failure)", e: "Si un firewall falla, el secundario toma el relevo automáticamente." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "Si aumentan los clientes de la web, ¿cómo escalar con Nginx?", r: ["Apagando FW2", "Levantando servidores backend y configurando Nginx como Balanceador", "Pasar a Apache", "Aumentar disco"], c: "Levantando servidores backend y configurando Nginx como Balanceador", e: "Nginx reparte el tráfico (Upstream/Load Balancing) entre clones." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "¿Evolución lógica frente a stub_status de Nginx?", r: ["No monitorizar", "Imprimir logs", "Implementar pila avanzada (Prometheus + Grafana)", "Revisar a mano"], c: "Implementar pila avanzada (Prometheus + Grafana)", e: "Grafana aporta Dashboards profesionales y alertas automatizadas." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "Para evitar pérdida de configuraciones críticas, ¿qué mejora se contempla?", r: ["Claves en hosts", "Backups automatizados de /etc y Snapshots en el hipervisor", "Escribir reglas", "Solo reiniciar"], c: "Backups automatizados de /etc y Snapshots en el hipervisor", e: "Garantiza recuperación rápida tras un fallo o intrusión." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "Para analizar ataques capa 7 (SQL/Virus), ¿qué se requiere?", r: ["Desactivar DMZ", "IDS/IPS (Suricata/Snort) o WAF", "ACCEPT en iptables", "Sin claves"], c: "IDS/IPS (Suricata/Snort) o WAF", e: "Iptables no lee el contenido de la web, requiere WAF o IDS." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "Para gestionar decenas de empleados, ¿qué se implementaría?", r: ["Excel compartido", "Directorio Activo (Active Directory / LDAP)", "Tabla HTML", "Misma clave a todos"], c: "Directorio Activo (Active Directory / LDAP)", e: "Centraliza la autenticación y permisos de forma masiva." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "¿Qué ataque mitiga 'Fail2Ban'?", r: ["Robo hardware", "Ataques de fuerza bruta (banea IPs que fallan accesos múltiples veces)", "Cortes de luz", "ISP caído"], c: "Ataques de fuerza bruta (banea IPs que fallan accesos múltiples veces)", e: "Lee los logs y añade reglas dinámicas a iptables contra atacantes." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "Migración Cloud profesional futura, ¿dónde?", r: ["Packet Tracer", "AWS, Microsoft Azure o Google Cloud", "Office 365", "WordPress"], c: "AWS, Microsoft Azure o Google Cloud", e: "Nubes IaaS (Infraestructura como Servicio) de nivel empresarial." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Escalabilidad y Futuro", u: "Cuestionario", p: "¿Qué automatizaría el despliegue de toda la red sin ir uno a uno?", r: ["Notepad++", "Ansible o Terraform (Infraestructura como Código)", "Word", "GIMP"], c: "Ansible o Terraform (Infraestructura como Código)", e: "Herramientas de IaC que automatizan servidores y configuraciones." },
+    { m: "Apartado 6: Gestión, Costes y Futuro", t: "Cierre", u: "Cuestionario", p: "En resumen, el diseño perimetral y Nginx garantizan...", r: ["Bajo rendimiento", "Entorno corporativo seguro, contenido ante ataques, viable económicamente y escalable", "Acceso público a LAN", "Costes altos"], c: "Entorno corporativo seguro, contenido ante ataques, viable económicamente y escalable", e: "El proyecto TFG cumple su objetivo protegiendo y ahorrando costes." }
+];
+
+// ==========================================
+    // VARIABLES GLOBALES
+    // ==========================================
+    let currentQuestions = [];
+    let answeredStatus = {};
+    let startTime, timerInterval;
+    let selectedSubject = "";
+    let selectedCategory = "";
+    let selectedTopicName = "";
+
+    // ==========================================
+    // INICIALIZACIÓN Y CREACIÓN DEL MENÚ
+    // ==========================================
+    window.onload = function() {
+        const container = document.getElementById('subjects-container');
+        container.innerHTML = ''; // Limpiar el contenedor por si recargamos la vista
+        
+        const subjects = [...new Set(misPreguntas.map(q => q.m))];
+        const completedTests = JSON.parse(localStorage.getItem('completed_tests_v5') || '[]');
+        
+        subjects.forEach(subject => {
+            const subjectQuestions = misPreguntas.filter(q => q.m === subject);
+            const categories = [...new Set(subjectQuestions.map(q => q.t))];
+            
+            const subjectDiv = document.createElement('div');
+            subjectDiv.className = 'subject-block';
+            
+            const title = document.createElement('h2');
+            title.className = 'subject-title';
+            title.innerHTML = ` 📘 ${subject}`;
+            subjectDiv.appendChild(title);
+            
+            const grid = document.createElement('div');
+            grid.className = 'topics-grid';
+            
+            categories.forEach(category => {
+                const categoryQuestions = subjectQuestions.filter(q => q.t === category);
+                const topics = [...new Set(categoryQuestions.map(q => q.u))];
+                
+                if (topics.length === 1) {
+                    const btn = document.createElement('button');
+                    btn.className = 'topic-card';
+                    const testId = `${subject}-${category}-${topics[0]}`;
+                    btn.setAttribute('data-testid', testId);
+                    
+                    if (completedTests.includes(testId)) {
+                        btn.innerText = `${category} ✅ `;
+                        btn.style.background = '#27ae60';
+                    } else {
+                        btn.innerText = category;
+                    }
+                    
+                    btn.onclick = () => startTest(subject, category, topics[0]);
+                    btn.oncontextmenu = (e) => { e.preventDefault(); uncheckTest(testId); };
+                    grid.appendChild(btn);
+                } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.display = "flex";
+                    wrapper.style.flexDirection = "column";
+                    wrapper.style.gap = "10px";
+                    
+                    const btnCat = document.createElement('button');
+                    btnCat.className = 'topic-card';
+                    btnCat.style.background = 'var(--primary)';
+                    btnCat.innerHTML = ` 📂 ${category} ▼ `;
+                    
+                    const subGrid = document.createElement('div');
+                    subGrid.style.display = 'none';
+                    subGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
+                    subGrid.style.gap = '10px';
+                    subGrid.style.padding = '15px';
+                    subGrid.style.background = '#e1e8ed';
+                    subGrid.style.borderRadius = '8px';
+                    
+                    btnCat.onclick = () => {
+                        if (subGrid.style.display === 'none') {
+                            subGrid.style.display = 'grid';
+                            btnCat.innerHTML = ` 📂 ${category} ▲ `;
+                        } else {
+                            subGrid.style.display = 'none';
+                            btnCat.innerHTML = ` 📂 ${category} ▼ `;
+                        }
+                    };
+                    
+                    topics.forEach(topic => {
+                        const btnTop = document.createElement('button');
+                        btnTop.className = 'topic-card';
+                        btnTop.style.fontSize = '1rem';
+                        btnTop.style.padding = '10px';
+                        
+                        const testId = `${subject}-${category}-${topic}`;
+                        btnTop.setAttribute('data-testid', testId);
+                        
+                        if (completedTests.includes(testId)) {
+                            btnTop.innerText = `${topic} ✅ `;
+                            btnTop.style.background = '#27ae60';
+                        } else {
+                            btnTop.innerText = topic;
+                        }
+                        
+                        btnTop.onclick = () => startTest(subject, category, topic);
+                        btnTop.oncontextmenu = (e) => { e.preventDefault(); uncheckTest(testId); };
+                        subGrid.appendChild(btnTop);
+                    });
+                    
+                    const btnAll = document.createElement('button');
+                    btnAll.className = 'topic-card';
+                    btnAll.style.fontSize = '1rem';
+                    btnAll.style.padding = '10px';
+                    btnAll.style.background = 'var(--primary)';
+                    
+                    const allId = `${subject}-${category}-Todos`;
+                    btnAll.setAttribute('data-testid', allId);
+                    
+                    if (completedTests.includes(allId)) {
+                        btnAll.innerText = `Todo el bloque ✅ `;
+                        btnAll.style.background = '#27ae60';
+                    } else {
+                        btnAll.innerText = `Todo el bloque`;
+                    }
+                    
+                    btnAll.onclick = () => startTest(subject, category, 'Todos');
+                    btnAll.oncontextmenu = (e) => { e.preventDefault(); uncheckTest(allId); };
+                    subGrid.appendChild(btnAll);
+                    
+                    wrapper.appendChild(btnCat);
+                    wrapper.appendChild(subGrid);
+                    grid.appendChild(wrapper);
+                }
+            });
+            
+            const btnSubjectAll = document.createElement('button');
+            btnSubjectAll.className = 'topic-card topic-all';
+            
+            const subjAllId = `${subject}-Global-Todos`;
+            btnSubjectAll.setAttribute('data-testid', subjAllId);
+            
+            if (completedTests.includes(subjAllId)) {
+                btnSubjectAll.innerText = `Toda la materia ✅ `;
+                btnSubjectAll.style.background = '#27ae60';
+            } else {
+                btnSubjectAll.innerText = `Toda la materia`;
+            }
+            
+            btnSubjectAll.onclick = () => startTest(subject, 'Global', 'Todos');
+            btnSubjectAll.oncontextmenu = (e) => { e.preventDefault(); uncheckTest(subjAllId); };
+            grid.appendChild(btnSubjectAll);
+            
+            subjectDiv.appendChild(grid);
+            container.appendChild(subjectDiv);
+        });
+        
+        // Mostrar número de preguntas falladas al cargar el menú
+        updateFailedCount();
+    };
+
+    function uncheckTest(testId) {
+        if(confirm(`¿Quieres quitar el check de completado de este tema?`)) {
+            let completed = JSON.parse(localStorage.getItem('completed_tests_v5') || '[]');
+            completed = completed.filter(id => id !== testId);
+            localStorage.setItem('completed_tests_v5', JSON.stringify(completed));
+            window.onload(); 
+        }
+    }
+
+    // ==========================================
+    // CONTROL DEL BOTÓN "ATRÁS" DEL MÓVIL/NAVEGADOR
+    // ==========================================
+    history.replaceState({page: 'menu'}, "Menú", "");
+
+    window.addEventListener('popstate', function(event) {
+        if (event.state && event.state.page === 'menu') {
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('test-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'block';
+            if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+            updateCheckmarks();
+            updateFailedCount();
+            window.scrollTo(0,0);
+        }
+    });
+
+    // ==========================================
+    // FUNCIÓN DEL BOTÓN "VOLVER" (BACK)
+    // ==========================================
+    function goBackToMenu() {
+        history.back(); // Simula el botón físico de atrás en los móviles/navegadores
+    }
+
+    // ==========================================
+    // FUNCIONES DE LÓGICA DEL TEST
+    // ==========================================
+    function startTest(subject, category, topic) {
+        selectedSubject = subject;
+        selectedCategory = category;
+        selectedTopicName = topic;
+        
+        if (category === 'Global') {
+            document.getElementById('display-topic').innerText = `${subject} (Test Global)`;
+            currentQuestions = misPreguntas.filter(q => q.m === subject);
+        } else if (topic === 'Todos') {
+            document.getElementById('display-topic').innerText = `${subject} - ${category}`;
+            currentQuestions = misPreguntas.filter(q => q.m === subject && q.t === category);
+        } else {
+            let isSimple = misPreguntas.filter(q => q.m === subject && q.t === category).map(q => q.u).length === 1;
+            document.getElementById('display-topic').innerText = isSimple ? `${subject} - ${category}` : `${subject} - ${topic}`;
+            currentQuestions = misPreguntas.filter(q => q.m === subject && q.t === category && q.u === topic);
+        }
+        
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('test-section').style.display = 'block';
+        
+        // Empujamos el estado al historial para el botón "Atrás"
+        history.pushState({page: 'test'}, "Test", "");
+        
+        startTime = new Date();
+        timerInterval = setInterval(updateTimer, 1000);
+        
+        shuffleArray(currentQuestions);
+        renderAllQuestions();
+        
+        window.scrollTo(0,0);
+    }
+
+    function updateTimer() {
+        const diff = Math.floor((new Date() - startTime) / 1000);
+        document.getElementById('timer').innerText = ` ⏱️  ${Math.floor(diff / 60).toString().padStart(2, '0')}:${(diff % 60).toString().padStart(2, '0')}`;
+    }
+
+    function renderAllQuestions() {
+        const container = document.getElementById('questions-list');
+        container.innerHTML = '';
+        answeredStatus = {};
+        
+        currentQuestions.forEach((q, index) => {
+            let options = [...q.r];
+            shuffleArray(options);
+            
+            const qBlock = document.createElement('div');
+            qBlock.className = 'question-block';
+            
+            const qText = document.createElement('div');
+            qText.className = 'question-text';
+            qText.innerText = `${index + 1}/${currentQuestions.length}. ${q.p}`;
+            qBlock.appendChild(qText);
+            
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'options-container';
+            optionsContainer.id = `options-${index}`;
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                // Pasamos la pregunta completa para poder guardarla si falla
+                btn.onclick = function() { checkAnswer(this, index, opt, q.c, q.e, q.p); };
+                optionsContainer.appendChild(btn);
+            });
+            
+            qBlock.appendChild(optionsContainer);
+            
+            const expl = document.createElement('div');
+            expl.id = `explanation-${index}`;
+            expl.className = 'explanation';
+            qBlock.appendChild(expl);
+            
+            container.appendChild(qBlock);
+        });
+    }
+
+    function checkAnswer(btn, index, selected, correct, info, questionText) {
+        if (answeredStatus[index] !== undefined) return;
+        const optionsContainer = document.getElementById(`options-${index}`);
+        const buttons = optionsContainer.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+        
+        let failedQuestions = JSON.parse(localStorage.getItem('preguntas_falladas') || '[]');
+        
+        if (selected === correct) {
+            btn.classList.add('correct');
+            answeredStatus[index] = true;
+            
+            // Si la acierta y estaba en los fallos, la borramos
+            if (failedQuestions.includes(questionText)) {
+                failedQuestions = failedQuestions.filter(q => q !== questionText);
+                localStorage.setItem('preguntas_falladas', JSON.stringify(failedQuestions));
+                updateFailedCount();
+            }
+        } else {
+            btn.classList.add('wrong');
+            answeredStatus[index] = false;
+            buttons.forEach(b => {
+                if(b.innerText === correct) b.classList.add('correct');
+            });
+            
+            // Si la falla y NO estaba en la lista de fallos, se guarda
+            if (!failedQuestions.includes(questionText)) {
+                failedQuestions.push(questionText);
+                localStorage.setItem('preguntas_falladas', JSON.stringify(failedQuestions));
+                updateFailedCount();
+            }
+        }
+        
+        if (info && info.trim() !== "") {
+            const eb = document.getElementById(`explanation-${index}`);
+            eb.innerHTML = `<strong> 💡 Aclaración:</strong> ${info}`;
+            eb.style.display = 'block';
+        }
+    }
+
+    function finishTest() {
+        const totalQuestions = currentQuestions.length;
+        const totalAnswered = Object.keys(answeredStatus).length;
+        
+        if (totalAnswered < totalQuestions) {
+            if (!confirm(`Has respondido ${totalAnswered} de ${totalQuestions} preguntas. ¿Seguro que quieres finalizar el test?`)) {
+                return;
+            }
+        }
+        
+        clearInterval(timerInterval);
+        document.getElementById('test-section').style.display = 'none';
+        
+        let correctCount = 0;
+        let incorrectCount = 0;
+        Object.values(answeredStatus).forEach(v => {
+            if (v) correctCount++;
+            else incorrectCount++;
+        });
+        
+        let percentage = (correctCount / totalQuestions) * 100;
+        let successColor = getComputedStyle(document.documentElement).getPropertyValue('--success').trim();
+        let errorColor = getComputedStyle(document.documentElement).getPropertyValue('--error').trim();
+        
+        document.getElementById('gauge-chart').style.background = `conic-gradient(${successColor} ${percentage}%, ${errorColor} 0)`;
+        document.getElementById('score-text').innerText = `${correctCount}/${totalQuestions}`;
+        
+        document.getElementById('results-detail-text').innerHTML = `Has acertado <strong><span style="color: var(--success);">${correctCount}</span></strong> y fallado <strong><span style="color: var(--error);">${incorrectCount}</span></strong> de un total de ${totalQuestions} preguntas.`;
+        
+        document.getElementById('results-section').style.display = 'block';
+        
+        let completed = JSON.parse(localStorage.getItem('completed_tests_v5') || '[]');
+        let currentTestId = `${selectedSubject}-${selectedCategory}-${selectedTopicName}`;
+        
+        // No marcamos con check verde si es el test de Repaso General
+        if (selectedCategory !== "Fallos" && !completed.includes(currentTestId)) {
+            completed.push(currentTestId);
+            localStorage.setItem('completed_tests_v5', JSON.stringify(completed));
+        }
+        
+        window.scrollTo(0,0);
+    }
+
+    function resetProgress() {
+        if(confirm("¿Seguro que quieres borrar todo tu progreso? Esto quitará todos los ✅ y vaciará tu lista de fallos.")) {
+            localStorage.removeItem('completed_tests_v5');
+            localStorage.removeItem('preguntas_falladas');
+            window.onload(); 
+        }
+    }
+
+    function shuffleArray(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+    }
+
+    function updateCheckmarks() {
+        const completedTests = JSON.parse(localStorage.getItem('completed_tests_v5') || '[]');
+        document.querySelectorAll('.topic-card').forEach(btn => {
+            const testId = btn.getAttribute('data-testid');
+            if (testId && completedTests.includes(testId) && !btn.innerText.includes('✅')) {
+                btn.innerText = btn.innerText + ' ✅ ';
+                btn.style.background = '#27ae60';
+            }
+        });
+    }
+
+    // ==========================================
+    // FUNCIONES: REPASAR FALLOS
+    // ==========================================
+    function startFailedQuestionsTest() {
+        let failedQuestions = JSON.parse(localStorage.getItem('preguntas_falladas') || '[]');
+        
+        if (failedQuestions.length === 0) {
+            alert("¡Enhorabuena! 🎉 No tienes ninguna pregunta fallada pendiente de repasar.");
+            return;
+        }
+
+        selectedSubject = "Repaso General";
+        selectedCategory = "Fallos";
+        selectedTopicName = "Todos";
+        
+        document.getElementById('display-topic').innerText = `Repaso de Preguntas Falladas`;
+        
+        // Filtramos para extraer solo las preguntas falladas
+        currentQuestions = misPreguntas.filter(q => failedQuestions.includes(q.p));
+        
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('test-section').style.display = 'block';
+        
+        history.pushState({page: 'test'}, "Test", "");
+        
+        startTime = new Date();
+        timerInterval = setInterval(updateTimer, 1000);
+        
+        shuffleArray(currentQuestions);
+        renderAllQuestions();
+        
+        window.scrollTo(0,0);
+    }
+
+    function updateFailedCount() {
+        let failedQuestions = JSON.parse(localStorage.getItem('preguntas_falladas') || '[]');
+        let countSpan = document.getElementById('failed-count');
+        if(countSpan) countSpan.innerText = failedQuestions.length;
+    }
+</script>
+</body>
+</html>
